@@ -54,6 +54,7 @@ class XPUGenerationWorker(GPUWorker):
                 self.local_rank += dp_local_rank * tp_pp_world_size
                 assert self.local_rank < torch.xpu.device_count(), (
                     f"DP adjusted local rank {self.local_rank} is out of bounds. "
+                    f"Expected range is 0 to {torch.xpu.device_count() - 1}."
                 )
                 visible_device_count = torch.xpu.device_count() if torch.xpu.is_available() else 0
                 assert self.parallel_config.local_world_size <= visible_device_count, (
@@ -90,7 +91,7 @@ class XPUGenerationWorker(GPUWorker):
             logger.debug("worker init memory snapshot: %r", self.init_snapshot)
             logger.debug("worker requested memory: %sGiB", format_gib(self.requested_memory))
         else:
-            raise RuntimeError(f"Not support device type: {self.device_config.device}")
+            raise RuntimeError(f"Unsupported device type: {self.device_config.device}")
 
         # Initialize workspace manager
         num_ubatches = 2 if self.vllm_config.parallel_config.enable_dbo else 1
