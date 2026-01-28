@@ -10,6 +10,8 @@ def detect_device_type() -> str:
         return device_type.lower()
     if torch.cuda.is_available():
         return "cuda"
+    if hasattr(torch, "xpu") and torch.xpu.is_available():  # type: ignore[attr-defined]
+        return "xpu"
     if hasattr(torch, "npu") and torch.npu.is_available():  # type: ignore[attr-defined]
         return "npu"
     return "cpu"
@@ -17,6 +19,10 @@ def detect_device_type() -> str:
 
 def is_npu() -> bool:
     return detect_device_type() == "npu"
+
+
+def is_xpu() -> bool:
+    return detect_device_type() == "xpu"
 
 
 def is_rocm() -> bool:
@@ -33,6 +39,8 @@ def get_device_control_env_var() -> str:
     device_type = detect_device_type()
     if device_type == "npu":
         return "ASCEND_RT_VISIBLE_DEVICES"
+    if device_type == "xpu":
+        return "ZE_AFFINITY_MASK"
     return "CUDA_VISIBLE_DEVICES"  # fallback
 
 
@@ -40,7 +48,7 @@ def get_diffusion_worker_class() -> type:
     """Get the appropriate diffusion WorkerProc class based on current device type.
 
     Returns:
-        The WorkerProc class for the detected device type (either NPUWorkerProc or WorkerProc).
+        The WorkerProc class for the detected device type (NPUWorkerProc, XPUWorkerProc, or WorkerProc).
 
     Raises:
         ImportError: If the worker module for the detected device is not available.
@@ -51,6 +59,10 @@ def get_diffusion_worker_class() -> type:
         from vllm_omni.diffusion.worker.npu.npu_worker import NPUWorkerProc
 
         return NPUWorkerProc
+    elif device_type == "xpu":
+        from vllm_omni.diffusion.worker.xpu.xpu_worker import XPUWorkerProc
+
+        return XPUWorkerProc
     else:
         # Default to GPU worker for cuda and other devices
         from vllm_omni.diffusion.worker.gpu_diffusion_worker import WorkerProc
