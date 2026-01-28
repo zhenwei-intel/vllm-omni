@@ -26,7 +26,7 @@ logger = init_logger(__name__)
 
 class XPUGenerationWorker(GPUWorker):
     """XPU worker for generation stages in Omni model.
-    
+
     Extends the base GPUWorker to support Intel XPU devices for generation
     model stages (e.g., code2wav).
     """

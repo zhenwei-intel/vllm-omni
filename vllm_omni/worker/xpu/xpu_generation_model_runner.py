@@ -10,8 +10,8 @@ from vllm_omni.worker.gpu_generation_model_runner import GPUGenerationModelRunne
 
 class XPUGenerationModelRunner(GPUGenerationModelRunner):
     """Generation model runner for Intel XPU devices.
-    
-    Inherits functionality from GPUGenerationModelRunner. XPU-specific 
+
+    Inherits functionality from GPUGenerationModelRunner. XPU-specific
     optimizations can be added here as needed.
     """
 

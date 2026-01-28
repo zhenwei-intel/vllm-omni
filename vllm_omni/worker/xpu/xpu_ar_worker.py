@@ -22,7 +22,7 @@ logger = init_logger(__name__)
 
 class XPUARWorker(GPUWorker):
     """XPU AR worker for thinker/talker stages in Omni model.
-    
+
     Extends the base GPUWorker to support Intel XPU devices for autoregressive
     model stages.
     """

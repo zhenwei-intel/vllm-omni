@@ -11,7 +11,7 @@ from vllm_omni.worker.gpu_ar_model_runner import GPUARModelRunner
 
 class XPUARModelRunner(GPUARModelRunner):
     """AR model runner for Intel XPU devices.
-    
+
     Inherits functionality from GPUARModelRunner. XPU-specific optimizations
     can be added here as needed.
     """
