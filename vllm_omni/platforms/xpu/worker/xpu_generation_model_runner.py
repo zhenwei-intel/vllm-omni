@@ -11,8 +11,9 @@ from vllm_omni.worker.gpu_generation_model_runner import GPUGenerationModelRunne
 
 class XPUGenerationModelRunner(GPUGenerationModelRunner):
     """XPU generation model runner for vLLM-Omni.
-    
+
     Inherits all functionality from GPUGenerationModelRunner as XPU follows
     the same execution model as GPU/CUDA for non-autoregressive generation.
     """
+
     pass
