@@ -1,6 +1,6 @@
 # stage config for running qwen2.5-omni with architecture of OmniLLM.
 
-# The following config has been verified on 2x H100-80G GPU.
+# The following config is adapted from GPU settings for Intel XPU devices.
 stage_args:
   - stage_id: 0
     stage_type: llm  # Use llm stage type to launch OmniLLM
@@ -64,7 +64,7 @@ stage_args:
     stage_type: llm  # Use llm stage type to launch OmniLLM
     runtime:
       process: true
-      devices: "0"            # Example: use a different GPU than the previous stage; use "0" if single GPU
+      devices: "0"            # Example: use a different XPU than the previous stage; use "0" if single XPU
       max_batch_size: 1
     engine_args:
       model_stage: code2wav
