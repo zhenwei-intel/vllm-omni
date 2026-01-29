@@ -64,7 +64,9 @@ Visit our [documentation](https://vllm-omni.readthedocs.io/en/latest/) to learn 
 ## Contributing
 
 We welcome and value any contributions and collaborations.
-Please check out [Contributing to vLLM-Omni](https://vllm-omni.readthedocs.io/en/latest/contributing/) for how to get involved.
+Please check out [CONTRIBUTING.md](./CONTRIBUTING.md) or our [online contributing guide](https://vllm-omni.readthedocs.io/en/latest/contributing/) for how to get involved.
+
+For security vulnerabilities, please see our [Security Policy](./SECURITY.md).
 
 ## Join the Community
 Feel free to ask questions, provide feedbacks and discuss with fellow users of vLLM-Omni in `#sig-omni` slack channel at [slack.vllm.ai](https://slack.vllm.ai) or vLLM user forum at [discuss.vllm.ai](https://discuss.vllm.ai).
@@ -72,6 +74,13 @@ Feel free to ask questions, provide feedbacks and discuss with fellow users of v
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=vllm-project/vllm-omni&type=date&legend=top-left)](https://www.star-history.com/#vllm-project/vllm-omni&type=date&legend=top-left)
+
+## Documentation
+
+- [CHANGELOG.md](./CHANGELOG.md) - Version history and release notes
+- [KNOWN_ISSUES.md](./KNOWN_ISSUES.md) - Known issues and workarounds
+- [SECURITY.md](./SECURITY.md) - Security policy and vulnerability reporting
+- [CONTRIBUTING.md](./CONTRIBUTING.md) - How to contribute
 
 ## License
 
