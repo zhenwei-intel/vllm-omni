@@ -87,7 +87,7 @@ def _run_baseline(model_name: str, dtype: torch.dtype, attn_backend: str, height
                 width=width,
                 num_inference_steps=4,
                 guidance_scale=0.0,
-                generator=torch.Generator(current_omni_platform.device_type).manual_seed(seed),
+                generator=torch.Generator(device=current_omni_platform.get_torch_device()).manual_seed(seed),
                 num_outputs_per_prompt=1,
             ),
         )
@@ -124,7 +124,7 @@ def _run_sp(
                 width=width,
                 num_inference_steps=4,
                 guidance_scale=0.0,
-                generator=torch.Generator(current_omni_platform.device_type).manual_seed(seed),
+                generator=torch.Generator(device=current_omni_platform.get_torch_device()).manual_seed(seed),
                 num_outputs_per_prompt=1,
             ),
         )

@@ -90,7 +90,8 @@ def calculate_dimensions(image: PIL.Image.Image, max_area: int = 480 * 832) -> t
 
 def main():
     args = parse_args()
-    generator = torch.Generator(device=current_omni_platform.device_type).manual_seed(args.seed)
+    device = current_omni_platform.get_torch_device()
+    generator = torch.Generator(device=device).manual_seed(args.seed)
 
     # Load input image
     image = PIL.Image.open(args.image).convert("RGB")
