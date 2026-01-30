@@ -6,7 +6,7 @@
 # --8<-- [end:requirements]
 # --8<-- [start:set-up-using-python]
 
-vLLM-Omni current recommends the steps in under setup through Docker Images.
+vLLM-Omni currently recommends the steps in under setup through Docker Images.
 
 # --8<-- [start:pre-built-wheels]
 
@@ -36,7 +36,7 @@ docker run --rm \
 --env "HF_TOKEN=$HF_TOKEN" \
 -p 8091:8091 \
 vllm-omni-xpu \
---model Qwen/Qwen3-Omni-30B-A3B-Instruct --port 8091
+--model Qwen/Qwen3-Omni-30B-A3B-Instruct --omni --port 8091
 ```
 
 ##### Launch with interactive session for development

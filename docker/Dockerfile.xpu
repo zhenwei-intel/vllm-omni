@@ -23,6 +23,6 @@ CMD ["/bin/bash"]
 
 ENTRYPOINT []
 
-#Set entrypoint for vllm-openai official images
+# Set entrypoint for vllm-openai official images
 FROM final AS vllm-openai
 ENTRYPOINT ["vllm", "serve", "--omni"]
