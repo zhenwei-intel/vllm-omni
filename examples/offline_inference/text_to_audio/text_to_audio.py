@@ -118,7 +118,8 @@ def save_audio(audio_data: np.ndarray, output_path: str, sample_rate: int = 4410
 
 def main():
     args = parse_args()
-    generator = torch.Generator(device=current_omni_platform.device_type).manual_seed(args.seed)
+    device = current_omni_platform.get_torch_device()
+    generator = torch.Generator(device=device).manual_seed(args.seed)
 
     print(f"\n{'=' * 60}")
     print("Stable Audio Open - Text-to-Audio Generation")

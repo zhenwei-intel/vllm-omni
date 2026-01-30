@@ -91,7 +91,8 @@ def parse_args() -> argparse.Namespace:
 
 def main():
     args = parse_args()
-    generator = torch.Generator(device=current_omni_platform.device_type).manual_seed(args.seed)
+    device = current_omni_platform.get_torch_device()
+    generator = torch.Generator(device=device).manual_seed(args.seed)
 
     # Wan2.2 cache-dit tuning (from cache-dit examples and cache_alignment).
     cache_config = None

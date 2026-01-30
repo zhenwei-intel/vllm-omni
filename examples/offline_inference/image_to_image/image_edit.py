@@ -316,7 +316,8 @@ def main():
     else:
         input_image = input_images
 
-    generator = torch.Generator(device=current_omni_platform.device_type).manual_seed(args.seed)
+    device = current_omni_platform.get_torch_device()
+    generator = torch.Generator(device=device).manual_seed(args.seed)
 
     parallel_config = DiffusionParallelConfig(
         ulysses_degree=args.ulysses_degree,

@@ -98,7 +98,8 @@ def build_demo(args: argparse.Namespace) -> gr.Blocks:
             raise gr.Error("Inference steps must be a positive integer.")
         if num_images not in {1, 2, 3, 4}:
             raise gr.Error("Number of images must be 1, 2, 3, or 4.")
-        generator = torch.Generator(device=current_omni_platform.device_type).manual_seed(seed)
+        device = current_omni_platform.get_torch_device()
+        generator = torch.Generator(device=device).manual_seed(seed)
         outputs = omni.generate(
             prompt.strip(),
             OmniDiffusionSamplingParams(
