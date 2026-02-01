@@ -6,7 +6,7 @@
 import pytest
 import torch
 
-from vllm_omni.diffusion.models.z_image.z_image_transformer import ZImageTransformerBlock
+from vllm_omni.diffusion.models.z_image.z_image_transformer import ADALN_EMBED_DIM, ZImageTransformerBlock
 
 
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float16, torch.bfloat16])
@@ -58,7 +58,7 @@ def test_zimage_transformer_block_compile(dtype: torch.dtype, modulation: bool):
     # AdaLN input (only needed if modulation is True)
     adaln_input = None
     if modulation:
-        adaln_embed_dim = min(dim, 256)  # ADALN_EMBED_DIM from the module
+        adaln_embed_dim = min(dim, ADALN_EMBED_DIM)
         adaln_input = torch.randn(batch_size, adaln_embed_dim, dtype=dtype, device=device)
     
     # Run without compile
@@ -115,9 +115,6 @@ def test_zimage_transformer_block_compile(dtype: torch.dtype, modulation: bool):
         f"  Output range (no compile): [{output_no_compile.min().item():.6e}, {output_no_compile.max().item():.6e}]\n"
         f"  Output range (compiled): [{output_compiled.min().item():.6e}, {output_compiled.max().item():.6e}]"
     )
-    
-    print(f"✓ Test passed for dtype={dtype}, modulation={modulation}")
-    print(f"  Max diff: {max_diff:.6e}, Mean diff: {mean_diff:.6e}")
 
 
 if __name__ == "__main__":
