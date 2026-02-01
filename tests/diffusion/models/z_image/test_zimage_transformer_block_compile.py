@@ -27,10 +27,10 @@ def _setup_parallel_environment():
     os.environ.setdefault("WORLD_SIZE", "1")
     os.environ.setdefault("MASTER_ADDR", "localhost")
     os.environ.setdefault("MASTER_PORT", "12355")
-    
+
     # Initialize distributed environment
     init_distributed_environment()
-    
+
     # Initialize model parallel with TP=1 (no actual parallelism)
     initialize_model_parallel(
         data_parallel_size=1,
@@ -49,11 +49,12 @@ def test_zimage_transformer_block_compile(dtype: torch.dtype, modulation: bool):
     """Test that ZImageTransformerBlock produces the same output with and without torch.compile."""
     # Set random seed for reproducibility
     torch.manual_seed(42)
+    # seed_everything also seeds numpy, random module, and device-specific RNGs
     current_omni_platform.seed_everything(42)
-    
+
     # Setup parallel environment
     _setup_parallel_environment()
-    
+
     try:
         # Model parameters
         layer_id = 0
@@ -62,7 +63,7 @@ def test_zimage_transformer_block_compile(dtype: torch.dtype, modulation: bool):
         n_kv_heads = 8
         norm_eps = 1e-5
         qk_norm = True
-        
+
         # Set up OmniDiffusionConfig
         parallel_config = DiffusionParallelConfig(
             pipeline_parallel_size=1,
@@ -73,18 +74,18 @@ def test_zimage_transformer_block_compile(dtype: torch.dtype, modulation: bool):
             ring_degree=1,
             cfg_parallel_size=1,
         )
-        
+
         od_config = OmniDiffusionConfig(
             model="test_model",
             dtype=dtype,
             parallel_config=parallel_config,
         )
-        
+
         # Move to appropriate device and dtype
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         torch.set_default_device(device)
         torch.set_default_dtype(dtype)
-        
+
         # Create the transformer block within forward context
         with set_forward_context(omni_diffusion_config=od_config):
             block = ZImageTransformerBlock(
@@ -96,31 +97,31 @@ def test_zimage_transformer_block_compile(dtype: torch.dtype, modulation: bool):
                 qk_norm=qk_norm,
                 modulation=modulation,
             )
-            
+
             block = block.to(device).to(dtype)
             block.eval()
-    
+
             # Create test input tensors
             batch_size = 2
             seq_len = 16
             head_dim = dim // n_heads
-            
+
             # Input hidden states
             x = torch.randn(batch_size, seq_len, dim, dtype=dtype, device=device)
-            
+
             # Attention mask (all ones for simplicity)
             attn_mask = torch.ones(batch_size, seq_len, dtype=dtype, device=device)
-            
+
             # RoPE embeddings (cos and sin)
             cos = torch.randn(batch_size, seq_len, head_dim, dtype=dtype, device=device)
             sin = torch.randn(batch_size, seq_len, head_dim, dtype=dtype, device=device)
-            
+
             # AdaLN input (only needed if modulation is True)
             adaln_input = None
             if modulation:
                 adaln_embed_dim = min(dim, ADALN_EMBED_DIM)
                 adaln_input = torch.randn(batch_size, adaln_embed_dim, dtype=dtype, device=device)
-            
+
             # Run without compile
             with torch.no_grad():
                 output_no_compile = block(
@@ -130,10 +131,10 @@ def test_zimage_transformer_block_compile(dtype: torch.dtype, modulation: bool):
                     sin,
                     adaln_input=adaln_input.clone() if adaln_input is not None else None,
                 )
-            
+
             # Compile the block
             compiled_block = torch.compile(block)
-            
+
             # Run with compile
             with torch.no_grad():
                 output_compiled = compiled_block(
@@ -143,12 +144,12 @@ def test_zimage_transformer_block_compile(dtype: torch.dtype, modulation: bool):
                     sin,
                     adaln_input=adaln_input.clone() if adaln_input is not None else None,
                 )
-            
+
             # Compare outputs
             assert output_no_compile.shape == output_compiled.shape, (
                 f"Output shapes don't match: {output_no_compile.shape} vs {output_compiled.shape}"
             )
-            
+
             # Check that outputs are close
             # Use appropriate tolerance based on dtype
             if dtype == torch.float32:
@@ -157,15 +158,15 @@ def test_zimage_transformer_block_compile(dtype: torch.dtype, modulation: bool):
                 atol, rtol = 1e-3, 1e-2
             else:  # bfloat16
                 atol, rtol = 1e-2, 1e-2
-            
+
             max_diff = torch.abs(output_no_compile - output_compiled).max().item()
             mean_diff = torch.abs(output_no_compile - output_compiled).mean().item()
-            
+
             # Calculate relative difference
             output_abs = torch.abs(output_no_compile)
             relative_diff = torch.abs(output_no_compile - output_compiled) / (output_abs + 1e-8)
             max_relative_diff = relative_diff.max().item()
-            
+
             assert torch.allclose(output_no_compile, output_compiled, atol=atol, rtol=rtol), (
                 f"Outputs don't match for dtype={dtype}, modulation={modulation}:\n"
                 f"  Max absolute difference: {max_diff:.6e}\n"
