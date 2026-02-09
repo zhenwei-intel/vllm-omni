@@ -32,9 +32,24 @@ if current_omni_platform.is_rocm():
         pass
 elif current_omni_platform.is_xpu():
     try:
-        from vllm.v1.attention.backends.fa_utils import flash_attn_varlen_func  # noqa: F401
+        from vllm.v1.attention.backends.fa_utils import flash_attn_func, flash_attn_varlen_func  # noqa: F401
     except (ImportError, ModuleNotFoundError):
-        pass
+        # Define fallback functions with clear error messages
+        def flash_attn_func(*args, **kwargs):
+            raise RuntimeError(
+                "XPU flash attention backend 'vllm.v1.attention.backends.fa_utils."
+                "flash_attn_func' could not be imported. "
+                "Ensure the appropriate XPU flash attention support is installed and "
+                "configured, or use a configuration that falls back to the SDPA backend."
+            )
+        
+        def flash_attn_varlen_func(*args, **kwargs):
+            raise RuntimeError(
+                "XPU flash attention backend 'vllm.v1.attention.backends.fa_utils."
+                "flash_attn_varlen_func' could not be imported. "
+                "Ensure the appropriate XPU flash attention support is installed and "
+                "configured, or use a configuration that falls back to the SDPA backend."
+            )
 else:
     # CUDA: try FA3 -> FA2 fallback chain
     # Try FA3 from fa3-fwd PyPI package
