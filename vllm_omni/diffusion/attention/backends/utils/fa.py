@@ -42,7 +42,7 @@ elif current_omni_platform.is_xpu():
                 "Ensure the appropriate XPU flash attention support is installed and "
                 "configured, or use a configuration that falls back to the SDPA backend."
             )
-        
+
         def flash_attn_varlen_func(*args, **kwargs):
             raise RuntimeError(
                 "XPU flash attention backend 'vllm.v1.attention.backends.fa_utils."
