@@ -277,6 +277,9 @@ class PackedAttentionMoT(Qwen2Attention):
             max_seqlen_k=max(key_values_lens).item(),
             causal=is_causal,
         )
+        # FA3 may return (out, lse) tuple, FA2 returns just out
+        if isinstance(packed_attn_output, tuple):
+            packed_attn_output = packed_attn_output[0]
         packed_attn_output = packed_attn_output.reshape(-1, self.hidden_size)
         if mode == "und":
             packed_attn_output = self.o_proj(packed_attn_output)
