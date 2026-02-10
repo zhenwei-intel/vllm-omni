@@ -33,8 +33,6 @@ if current_omni_platform.is_rocm():
 elif current_omni_platform.is_xpu():
     try:
         from vllm.v1.attention.backends.fa_utils import flash_attn_varlen_func  # noqa: F401
-
-        flash_attn_func = F.scaled_dot_product_attention
     except (ImportError, ModuleNotFoundError):
         pass
 else:
