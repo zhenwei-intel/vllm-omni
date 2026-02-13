@@ -81,8 +81,10 @@ class FlashAttentionImpl(AttentionImpl):
             max_seqlen_k = attn_metadata.max_seqlen_k
             
             # Check if all required varlen metadata is present
-            if (cu_seqlens_q is not None and cu_seqlens_k is not None 
-                and max_seqlen_q is not None and max_seqlen_k is not None):
+            if (cu_seqlens_q is not None
+                and cu_seqlens_k is not None
+                and max_seqlen_q is not None
+                and max_seqlen_k is not None):
                 # Validate dtype and device for varlen FlashAttention:
                 # cu_seqlens tensors must be int32 and on the same device as query.
                 if cu_seqlens_q.dtype != torch.int32 or cu_seqlens_k.dtype != torch.int32:

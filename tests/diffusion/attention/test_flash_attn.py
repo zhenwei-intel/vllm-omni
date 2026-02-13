@@ -180,8 +180,9 @@ def test_varlen_path():
     value_packed = torch.randn(total_tokens, num_heads, head_dim, device=device, dtype=dtype)
     
     # Create cumulative sequence lengths (int32, on same device as query)
-    cu_seqlens_q = torch.tensor([0] + list(torch.cumsum(torch.tensor(seq_lens), dim=0).tolist()), 
-                                 dtype=torch.int32, device=device)
+    seq_lens_tensor = torch.tensor(seq_lens, dtype=torch.int32, device=device)
+    cu_seqlens_q = torch.cat([torch.tensor([0], dtype=torch.int32, device=device), 
+                               torch.cumsum(seq_lens_tensor, dim=0)])
     cu_seqlens_k = cu_seqlens_q.clone()
     
     max_seqlen_q = max(seq_lens)
