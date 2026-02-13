@@ -64,6 +64,11 @@ class AttentionMetadata:
     # a replicated tensor among processes appended to the front or rear of value, depends the joint_strategy
     joint_strategy: str = "front"
     # the strategy to joint the query, key, and value, can be "front" or "rear"
+    cu_seqlens_q: torch.Tensor | None = None
+    cu_seqlens_k: torch.Tensor | None = None
+    max_seqlen_q: int | None = None
+    max_seqlen_k: int | None = None
+    causal: bool | None = None
 
 
 T = TypeVar("T", bound=AttentionMetadata)
