@@ -74,21 +74,42 @@ class FlashAttentionImpl(AttentionImpl):
                 "Otherwise, use SDPA backend by setting DIFFUSION_ATTENTION_BACKEND=TORCH_SDPA"
             )
 
-        if attn_metadata is not None and attn_metadata.cu_seqlens_q is not None:
-            out = flash_attn_varlen_func(
-                q=query,
-                k=key,
-                v=value,
-                cu_seqlens_q=attn_metadata.cu_seqlens_q,
-                cu_seqlens_k=attn_metadata.cu_seqlens_k,
-                max_seqlen_q=attn_metadata.max_seqlen_q,
-                max_seqlen_k=attn_metadata.max_seqlen_k,
-                causal=attn_metadata.causal,
-                softmax_scale=self.softmax_scale,
-            )
-            if isinstance(out, tuple):
-                out = out[0]
-            return out
+        if attn_metadata is not None:
+            cu_seqlens_q = attn_metadata.cu_seqlens_q
+            cu_seqlens_k = attn_metadata.cu_seqlens_k
+            max_seqlen_q = attn_metadata.max_seqlen_q
+            max_seqlen_k = attn_metadata.max_seqlen_k
+            
+            # Check if all required varlen metadata is present
+            if (cu_seqlens_q is not None and cu_seqlens_k is not None 
+                and max_seqlen_q is not None and max_seqlen_k is not None):
+                # Validate dtype and device for varlen FlashAttention:
+                # cu_seqlens tensors must be int32 and on the same device as query.
+                if cu_seqlens_q.dtype != torch.int32 or cu_seqlens_k.dtype != torch.int32:
+                    raise ValueError(
+                        "cu_seqlens_q and cu_seqlens_k must have dtype torch.int32 "
+                        "when using varlen FlashAttention."
+                    )
+                if cu_seqlens_q.device != query.device or cu_seqlens_k.device != query.device:
+                    raise ValueError(
+                        "cu_seqlens_q and cu_seqlens_k must be on the same device as query "
+                        "when using varlen FlashAttention."
+                    )
+                
+                out = flash_attn_varlen_func(
+                    q=query,
+                    k=key,
+                    v=value,
+                    cu_seqlens_q=cu_seqlens_q,
+                    cu_seqlens_k=cu_seqlens_k,
+                    max_seqlen_q=max_seqlen_q,
+                    max_seqlen_k=max_seqlen_k,
+                    causal=attn_metadata.causal,
+                    softmax_scale=self.softmax_scale,
+                )
+                if isinstance(out, tuple):
+                    out = out[0]
+                return out
         query_length = query.size(1)
         attention_mask = attn_metadata.attn_mask if attn_metadata is not None else None
         #  Contains at least one padding token in the sequence

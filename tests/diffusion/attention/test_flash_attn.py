@@ -150,6 +150,161 @@ def test_padding_equivalence():
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="FlashAttention requires CUDA")
+def test_varlen_path():
+    """
+    Test the varlen fast-path that calls flash_attn_varlen_func directly.
+    
+    This test creates packed Q/K/V tensors with cu_seqlens metadata and validates
+    that the varlen dispatch logic works correctly.
+    """
+    device = torch.device("cuda")
+    dtype = torch.bfloat16
+    
+    # Configuration
+    num_heads = 8
+    head_dim = 64
+    
+    # Create variable-length sequences: [10, 15, 8] tokens
+    seq_lens = [10, 15, 8]
+    total_tokens = sum(seq_lens)
+    
+    # Initialize FlashAttention
+    fa_impl = FlashAttentionImpl(
+        num_heads=num_heads, head_size=head_dim, softmax_scale=1.0 / (head_dim**0.5), causal=False
+    )
+    
+    # Create packed tensors: (total_tokens, num_heads, head_dim)
+    torch.manual_seed(456)
+    query_packed = torch.randn(total_tokens, num_heads, head_dim, device=device, dtype=dtype)
+    key_packed = torch.randn(total_tokens, num_heads, head_dim, device=device, dtype=dtype)
+    value_packed = torch.randn(total_tokens, num_heads, head_dim, device=device, dtype=dtype)
+    
+    # Create cumulative sequence lengths (int32, on same device as query)
+    cu_seqlens_q = torch.tensor([0] + list(torch.cumsum(torch.tensor(seq_lens), dim=0).tolist()), 
+                                 dtype=torch.int32, device=device)
+    cu_seqlens_k = cu_seqlens_q.clone()
+    
+    max_seqlen_q = max(seq_lens)
+    max_seqlen_k = max(seq_lens)
+    
+    # Create metadata with varlen fields
+    attn_metadata = AttentionMetadata(
+        cu_seqlens_q=cu_seqlens_q,
+        cu_seqlens_k=cu_seqlens_k,
+        max_seqlen_q=max_seqlen_q,
+        max_seqlen_k=max_seqlen_k,
+        attn_mask=None,
+        causal=False,
+    )
+    
+    # Run varlen path
+    output_varlen = fa_impl.forward(
+        query=query_packed, key=key_packed, value=value_packed, attn_metadata=attn_metadata
+    )
+    
+    # Verify output shape
+    assert output_varlen.shape == (total_tokens, num_heads, head_dim), \
+        f"Expected shape {(total_tokens, num_heads, head_dim)}, got {output_varlen.shape}"
+    
+    # Verify output is not NaN or Inf
+    assert not torch.isnan(output_varlen).any(), "Output contains NaN values"
+    assert not torch.isinf(output_varlen).any(), "Output contains Inf values"
+    
+    print("\n=== Varlen Path Test ===")
+    print(f"Sequence lengths: {seq_lens}")
+    print(f"Total tokens: {total_tokens}")
+    print(f"cu_seqlens_q: {cu_seqlens_q.tolist()}")
+    print(f"max_seqlen_q: {max_seqlen_q}")
+    print(f"Output shape: {output_varlen.shape}")
+    print(f"Output dtype: {output_varlen.dtype}")
+    print("✓ Varlen path test PASSED!")
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="FlashAttention requires CUDA")
+def test_varlen_dtype_validation():
+    """
+    Test that varlen path validates dtype of cu_seqlens tensors.
+    """
+    device = torch.device("cuda")
+    dtype = torch.bfloat16
+    
+    num_heads = 8
+    head_dim = 64
+    seq_lens = [10, 15]
+    total_tokens = sum(seq_lens)
+    
+    fa_impl = FlashAttentionImpl(
+        num_heads=num_heads, head_size=head_dim, softmax_scale=1.0 / (head_dim**0.5), causal=False
+    )
+    
+    query_packed = torch.randn(total_tokens, num_heads, head_dim, device=device, dtype=dtype)
+    key_packed = torch.randn(total_tokens, num_heads, head_dim, device=device, dtype=dtype)
+    value_packed = torch.randn(total_tokens, num_heads, head_dim, device=device, dtype=dtype)
+    
+    # Create cu_seqlens with wrong dtype (int64 instead of int32)
+    cu_seqlens_q = torch.tensor([0, 10, 25], dtype=torch.int64, device=device)
+    cu_seqlens_k = cu_seqlens_q.clone()
+    
+    attn_metadata = AttentionMetadata(
+        cu_seqlens_q=cu_seqlens_q,
+        cu_seqlens_k=cu_seqlens_k,
+        max_seqlen_q=15,
+        max_seqlen_k=15,
+        attn_mask=None,
+        causal=False,
+    )
+    
+    # Should raise ValueError about dtype
+    with pytest.raises(ValueError, match="must have dtype torch.int32"):
+        fa_impl.forward(query=query_packed, key=key_packed, value=value_packed, attn_metadata=attn_metadata)
+    
+    print("\n=== Varlen Dtype Validation Test ===")
+    print("✓ Correctly rejected cu_seqlens with wrong dtype!")
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="FlashAttention requires CUDA")
+def test_varlen_device_validation():
+    """
+    Test that varlen path validates device of cu_seqlens tensors.
+    """
+    device = torch.device("cuda")
+    dtype = torch.bfloat16
+    
+    num_heads = 8
+    head_dim = 64
+    seq_lens = [10, 15]
+    total_tokens = sum(seq_lens)
+    
+    fa_impl = FlashAttentionImpl(
+        num_heads=num_heads, head_size=head_dim, softmax_scale=1.0 / (head_dim**0.5), causal=False
+    )
+    
+    query_packed = torch.randn(total_tokens, num_heads, head_dim, device=device, dtype=dtype)
+    key_packed = torch.randn(total_tokens, num_heads, head_dim, device=device, dtype=dtype)
+    value_packed = torch.randn(total_tokens, num_heads, head_dim, device=device, dtype=dtype)
+    
+    # Create cu_seqlens on CPU instead of same device as query
+    cu_seqlens_q = torch.tensor([0, 10, 25], dtype=torch.int32, device="cpu")
+    cu_seqlens_k = cu_seqlens_q.clone()
+    
+    attn_metadata = AttentionMetadata(
+        cu_seqlens_q=cu_seqlens_q,
+        cu_seqlens_k=cu_seqlens_k,
+        max_seqlen_q=15,
+        max_seqlen_k=15,
+        attn_mask=None,
+        causal=False,
+    )
+    
+    # Should raise ValueError about device
+    with pytest.raises(ValueError, match="must be on the same device as query"):
+        fa_impl.forward(query=query_packed, key=key_packed, value=value_packed, attn_metadata=attn_metadata)
+    
+    print("\n=== Varlen Device Validation Test ===")
+    print("✓ Correctly rejected cu_seqlens on wrong device!")
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="FlashAttention requires CUDA")
 def test_fa_vs_sdpa():
     """
     Case 2: Compare FlashAttention and SDPA backends with padding.
@@ -281,6 +436,33 @@ if __name__ == "__main__":
             test_fa_vs_sdpa()
         except Exception as e:
             print(f"✗ Case 2 failed: {e}")
+            import traceback
+
+            traceback.print_exc()
+
+        try:
+            print("\n[Running Case 3: Varlen Path]")
+            test_varlen_path()
+        except Exception as e:
+            print(f"✗ Case 3 failed: {e}")
+            import traceback
+
+            traceback.print_exc()
+
+        try:
+            print("\n[Running Case 4: Varlen Dtype Validation]")
+            test_varlen_dtype_validation()
+        except Exception as e:
+            print(f"✗ Case 4 failed: {e}")
+            import traceback
+
+            traceback.print_exc()
+
+        try:
+            print("\n[Running Case 5: Varlen Device Validation]")
+            test_varlen_device_validation()
+        except Exception as e:
+            print(f"✗ Case 5 failed: {e}")
             import traceback
 
             traceback.print_exc()
