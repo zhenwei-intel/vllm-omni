@@ -25,8 +25,9 @@ from transformers.models.qwen2.modeling_qwen2 import (
 )
 from transformers.utils import ModelOutput
 from vllm.transformers_utils.configs.bagel import BagelConfig
-from vllm.vllm_flash_attn import flash_attn_varlen_func
 
+from vllm_omni.diffusion.attention.backends.abstract import AttentionMetadata
+from vllm_omni.diffusion.attention.layer import Attention
 from vllm_omni.diffusion.layers.rope import RotaryEmbedding
 
 
@@ -177,6 +178,13 @@ class PackedAttentionMoT(Qwen2Attention):
         self.o_proj_moe_gen = nn.Linear(config.num_attention_heads * head_dim, config.hidden_size, bias=False)
 
         self.rotary_op = RotaryEmbedding(is_neox_style=True)
+        self.attn = Attention(
+            num_heads=self.num_heads,
+            head_size=self.head_dim,
+            softmax_scale=None,
+            causal=True,
+            num_kv_heads=self.num_key_value_heads,
+        )
 
     def forward(
         self,
@@ -266,16 +274,16 @@ class PackedAttentionMoT(Qwen2Attention):
 
         cu_seqlens_q = torch.nn.functional.pad(torch.cumsum(query_lens, dim=0), (1, 0))
         cu_seqlens_k = torch.nn.functional.pad(torch.cumsum(key_values_lens, dim=0), (1, 0))
-
-        packed_attn_output = flash_attn_varlen_func(
-            q=packed_query_states,
-            k=merged_key_states,
-            v=merged_value_states,
+        attn_metadata = AttentionMetadata(
             cu_seqlens_q=cu_seqlens_q.to(torch.int32),
             cu_seqlens_k=cu_seqlens_k.to(torch.int32),
             max_seqlen_q=max(query_lens).item(),
             max_seqlen_k=max(key_values_lens).item(),
+            attn_mask=None,
             causal=is_causal,
+        )
+        packed_attn_output = self.attn(
+            packed_query_states, merged_key_states, merged_value_states, attn_metadata=attn_metadata
         )
         packed_attn_output = packed_attn_output.reshape(-1, self.hidden_size)
         if mode == "und":
